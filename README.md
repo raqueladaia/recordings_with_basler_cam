@@ -547,12 +547,6 @@ For advanced users and developers:
 - numpy >= 1.21.0
 - Pillow >= 9.0.0
 
-### Development Guidelines:
-- All data from actual camera (no simulated/fake data)
-- Comprehensive code comments and docstrings
-- Modular design with single responsibility
-- Clear error messages for users
-- Automatic cleanup of resources
 
 ---
 
