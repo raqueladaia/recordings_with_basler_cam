@@ -1,0 +1,3 @@
+"""
+GUI module for user interface components
+"""

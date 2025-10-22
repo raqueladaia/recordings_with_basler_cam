@@ -1,0 +1,14 @@
+# LUPE Basler Camera Recording Application
+# Dependencies for recording videos from Basler cameras with GUI interface
+
+# Basler camera SDK - Official Python binding for pypylon
+pypylon>=1.7.0
+
+# Computer vision and video writing
+opencv-python>=4.5.0
+
+# Array operations for image data
+numpy>=1.21.0
+
+# Image processing for GUI display
+Pillow>=9.0.0
