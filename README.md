@@ -104,13 +104,13 @@ You have **two options** to get this application on your computer:
 
 ### Option A: Download as ZIP (Easier - No Git Required)
 
-1. Go to the repository webpage (the URL where this code is stored)
+1. Go to the [repository webpage](https://github.com/raqueladaia/recordings_with_basler_cam)
 2. Click the green "Code" button
 3. Click "Download ZIP"
 4. Save the ZIP file to your Documents folder
 5. Right-click the ZIP file and select "Extract All"
 6. Choose where to extract (e.g., `C:\Users\YourName\Documents\`)
-7. You'll now have a folder called `LUPE_recordings_with_basler`
+7. Find the extracted `recordings_with_basler_cam-main` folder containing `main.py` and rename it to `recordings_with_basler_cam` so the paths below match
 
 ### Option B: Clone with Git (For Advanced Users)
 
@@ -123,9 +123,9 @@ If you have Git installed:
    ```
 3. Clone the repository:
    ```
-   git clone [repository-url]
+   git clone https://github.com/raqueladaia/recordings_with_basler_cam.git
    ```
-4. You'll now have a folder called `LUPE_recordings_with_basler`
+4. You'll now have a folder called `recordings_with_basler_cam`
 
 ---
 
@@ -137,7 +137,7 @@ Now we'll install the required Python packages.
 
 **Easy way:**
 1. Open File Explorer
-2. Navigate to the `LUPE_recordings_with_basler` folder
+2. Navigate to the `recordings_with_basler_cam` folder
 3. Click in the address bar (where it shows the folder path)
 4. Type `cmd` and press Enter
 5. A black Command Prompt window will open in that folder
@@ -147,7 +147,7 @@ Now we'll install the required Python packages.
 2. Type `cmd` and press Enter
 3. Type this (adjust the path to where you extracted/cloned):
    ```
-   cd C:\Users\YourName\Documents\LUPE_recordings_with_basler
+   cd C:\Users\YourName\Documents\recordings_with_basler_cam
    ```
 
 ### Step 2: Create a Virtual Environment (Recommended)
@@ -510,7 +510,7 @@ with open('Mouse001_20251021_143055_metadata.json', 'r') as f:
 For those interested in how the application is organized:
 
 ```
-LUPE_recordings_with_basler/
+recordings_with_basler_cam/
 ├── main.py                          # Start the application by running this
 ├── requirements.txt                 # List of required Python packages
 ├── README.md                        # This file
@@ -636,7 +636,7 @@ Print this section for quick access:
 
 ### Starting the Application:
 ```bash
-cd C:\...\LUPE_recordings_with_basler
+cd C:\...\recordings_with_basler_cam
 venv\Scripts\activate
 python main.py
 ```
