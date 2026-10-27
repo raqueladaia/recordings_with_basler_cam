@@ -42,6 +42,11 @@ Thumbs.db
 CLAUDE.md
 .claude/
 
+# Settings specific to each recording PC (camera nicknames, saved recording/experiment settings, logs)
+config/
+saved_settings/
+logs/
+
 # Output videos and metadata (don't commit recordings)
 *.mp4
 *.avi

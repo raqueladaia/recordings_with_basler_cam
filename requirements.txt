@@ -1,14 +1,19 @@
-# LUPE Basler Camera Recording Application
-# Dependencies for recording videos from Basler cameras with GUI interface
+# MultiCam Recorder - multi-camera recording application
+# Python packages needed to run the application from the source code.
+# Versions are pinned to the ones tested with the cameras (Python 3.13, Windows 11),
+# so that every installation and every release build uses the same software.
 
-# Basler camera SDK - Official Python binding for pypylon
-pypylon>=1.7.0
+# Basler camera SDK - Official Python binding for pylon
+pypylon==4.2.0
 
-# Computer vision and video writing
-opencv-python>=4.5.0
+# Computer vision, USB cameras and video writing
+opencv-python==4.12.0.88
 
 # Array operations for image data
-numpy>=1.21.0
+numpy==2.2.6
 
 # Image processing for GUI display
-Pillow>=9.0.0
+Pillow==11.3.0
+
+# Reading the experiment Excel file (.xlsx)
+openpyxl==3.1.5

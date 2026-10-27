@@ -1,4 +1,4 @@
 """
-LUPE Basler Camera Recording Application
+MultiCam Recorder - multi-camera recording application (Basler + USB cameras)
 Main source package
 """

@@ -1,406 +1,319 @@
 """
 Basler Camera Control Module
 
-This module provides functionality for detecting, initializing, and controlling
-Basler cameras using the pypylon library.
+Detects, opens, configures and grabs frames from Basler cameras through
+pypylon (the official Python wrapper of the Basler pylon SDK).
 
 Key features:
-- Detect all connected Basler cameras
-- Initialize camera with specific serial number
-- Load configuration from .pfs files
-- Apply custom settings
-- Grab frames for recording and preview
-- Proper camera resource management
+- List every connected Basler camera (serial number, model, nickname stored in the camera)
+- Open one specific camera by serial number
+- Load a .pfs configuration file into the camera
+- Read the editable parameters, their limits, and apply new values in a safe order
+- Grab frames for preview (latest frame only) or recording (every frame, with drop detection)
 
 Reference: C:\\Users\\rasandor\\Documents\\Repositories\\multimodal_ephys_miniscope_basler\\src\\basler\\functions_basler_camera.py
 """
 
-from pypylon import pylon
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
-from typing import Optional, List, Dict, Tuple
+from pypylon import pylon
+
+
+# Parameters the user can change from the parameter window, in pylon node names.
+EDITABLE_PARAMETERS = [
+    'ExposureTime',
+    'Gain',
+    'AcquisitionFrameRate',
+    'BinningHorizontal',
+    'BinningVertical',
+    'Width',
+    'Height',
+    'OffsetX',
+    'OffsetY',
+    'Gamma',
+    'BlackLevel',
+]
+
+# Parameters that define the image geometry. The camera only accepts changes to
+# them while it is NOT grabbing; all other editable parameters can change live.
+GEOMETRY_PARAMETERS = ('BinningHorizontal', 'BinningVertical', 'Width', 'Height', 'OffsetX', 'OffsetY')
+
+# Read-only parameters shown to the user and saved in the metadata.
+INFO_PARAMETERS = [
+    'PixelFormat',
+    'ExposureAuto',
+    'GainAuto',
+    'AcquisitionFrameRateEnable',
+    'BinningHorizontalMode',
+    'BinningVerticalMode',
+    'SensorWidth',
+    'SensorHeight',
+    'DeviceLinkThroughputLimitMode',
+    'DeviceLinkThroughputLimit',
+]
+
+# Number of frame buffers pylon keeps while recording. If the program is
+# briefly slower than the camera (e.g. disk hiccup), frames wait in these
+# buffers instead of being dropped. 300 buffers = 5 s at 60 fps.
+RECORDING_BUFFER_COUNT = 300
+
+
+def list_basler_cameras() -> List[Dict[str, object]]:
+    """
+    List all Basler cameras connected to this PC.
+
+    Returns:
+        One dictionary per camera with:
+        - 'serial': serial number (string)
+        - 'model': model name (e.g. 'acA2040-120um')
+        - 'user_defined_name': nickname stored inside the camera (may be empty)
+        - 'accessible': False when another program already has the camera open
+    """
+    factory = pylon.TlFactory.GetInstance()
+    cameras = []
+    for device in factory.EnumerateDevices():
+        cameras.append({
+            'serial': device.GetSerialNumber(),
+            'model': device.GetModelName(),
+            'user_defined_name': device.GetUserDefinedName().strip(),
+            'accessible': factory.IsDeviceAccessible(device),
+        })
+    return cameras
 
 
 class BaslerCamera:
     """
-    Class for managing Basler camera operations.
+    One Basler camera, identified by its serial number.
 
-    Handles camera initialization, configuration, frame grabbing, and cleanup.
-    Supports loading settings from .pfs (pypylon Feature Stream) files.
+    The camera must be opened with open() before any other call, and should
+    be released with close() when it is not needed anymore.
     """
 
-    def __init__(self):
-        """Initialize the camera manager without connecting to a camera."""
+    kind = "Basler"
+
+    def __init__(self, serial: str):
+        self.serial = serial
         self.camera: Optional[pylon.InstantCamera] = None
-        self.factory = pylon.TlFactory.GetInstance()
-        self.is_grabbing = False
+        # Converter used only if the camera does not deliver Mono8 directly.
+        self._converter: Optional[pylon.ImageFormatConverter] = None
 
-    def detect_cameras(self) -> List[Dict[str, str]]:
-        """
-        Detect all connected Basler cameras.
-
-        Returns:
-            List of dictionaries containing camera information:
-            - 'serial_number': Camera serial number
-            - 'model_name': Camera model name
-            - 'friendly_name': User-friendly name
-
-        Example:
-            [
-                {
-                    'serial_number': '40123456',
-                    'model_name': 'acA1920-40uc',
-                    'friendly_name': 'Basler acA1920-40uc (40123456)'
-                }
-            ]
-        """
-        devices = self.factory.EnumerateDevices()
-
-        if len(devices) == 0:
-            return []
-
-        camera_list = []
-        for device in devices:
-            camera_info = {
-                'serial_number': device.GetSerialNumber(),
-                'model_name': device.GetModelName(),
-                'friendly_name': device.GetFriendlyName()
-            }
-            camera_list.append(camera_info)
-
-        return camera_list
-
-    def initialize_camera(self, serial_number: Optional[str] = None) -> bool:
-        """
-        Initialize and open a Basler camera.
-
-        Args:
-            serial_number: Specific camera serial number to connect to.
-                          If None, connects to the first available camera.
-
-        Returns:
-            True if camera was successfully initialized, False otherwise.
-
-        Raises:
-            RuntimeError: If no cameras are detected or connection fails.
-        """
-        try:
-            # If serial number is specified, find that specific camera
-            if serial_number:
-                devices = self.factory.EnumerateDevices()
-                device_found = None
-
-                for device in devices:
-                    if device.GetSerialNumber() == serial_number:
-                        device_found = device
-                        break
-
-                if device_found is None:
+    # ------------------------------------------------------------------
+    # Open / close
+    # ------------------------------------------------------------------
+    def open(self):
+        """Open the camera. Raises RuntimeError with a clear message on failure."""
+        factory = pylon.TlFactory.GetInstance()
+        for device in factory.EnumerateDevices():
+            if device.GetSerialNumber() == self.serial:
+                if not factory.IsDeviceAccessible(device):
                     raise RuntimeError(
-                        f"Camera with serial number {serial_number} not found"
+                        f"Basler camera {self.serial} is in use by another program "
+                        "(e.g. pylon Viewer or another instance of this application)."
                     )
+                self.camera = pylon.InstantCamera(factory.CreateDevice(device))
+                self.camera.Open()
+                return
+        raise RuntimeError(f"Basler camera {self.serial} is not connected.")
 
-                self.camera = pylon.InstantCamera(
-                    self.factory.CreateDevice(device_found)
-                )
-            else:
-                # Connect to first available camera
-                self.camera = pylon.InstantCamera(
-                    self.factory.CreateFirstDevice()
-                )
-
-            # Open the camera
-            self.camera.Open()
-
-            print(f"Camera opened: {self.camera.GetDeviceInfo().GetModelName()}")
-            print(f"Serial number: {self.camera.GetDeviceInfo().GetSerialNumber()}")
-
-            return True
-
-        except Exception as e:
-            print(f"Error initializing camera: {e}")
-            self.camera = None
-            return False
-
-    def get_camera_serial(self) -> Optional[str]:
-        """
-        Get the serial number of the currently connected camera.
-
-        Returns:
-            Serial number as string, or None if no camera is connected.
-        """
-        if self.camera and self.camera.IsOpen():
-            return self.camera.GetDeviceInfo().GetSerialNumber()
-        return None
-
-    def load_configuration_file(self, config_file_path: str) -> bool:
-        """
-        Load camera configuration from a .pfs file.
-
-        The .pfs file contains camera settings like exposure, gain, resolution,
-        frame rate, and other parameters saved from pylon Viewer or other tools.
-
-        Args:
-            config_file_path: Path to the .pfs configuration file.
-
-        Returns:
-            True if configuration was loaded successfully, False otherwise.
-        """
-        if not self.camera or not self.camera.IsOpen():
-            print("Error: Camera is not initialized")
-            return False
-
-        try:
-            # Load feature stream file using pypylon's built-in method
-            pylon.FeaturePersistence.Load(config_file_path, self.camera.GetNodeMap())
-            print(f"Configuration loaded from: {config_file_path}")
-            return True
-
-        except Exception as e:
-            print(f"Error loading configuration file: {e}")
-            return False
-
-    def apply_custom_settings(self, settings: Dict[str, any]) -> bool:
-        """
-        Apply custom camera settings programmatically.
-
-        Args:
-            settings: Dictionary of camera parameter names and values.
-                     Example: {
-                         'ExposureTime': 1550.0,
-                         'Gain': 10.0,
-                         'AcquisitionFrameRate': 60.0
-                     }
-
-        Returns:
-            True if all settings were applied successfully, False otherwise.
-        """
-        if not self.camera or not self.camera.IsOpen():
-            print("Error: Camera is not initialized")
-            return False
-
-        # Parameters that cannot be changed while camera is grabbing
-        # Skip these if camera is actively grabbing frames
-        non_grabbing_params = ['AcquisitionMode']
-
-        try:
-            for param_name, param_value in settings.items():
-                # Skip parameters that can't be changed during grabbing
-                if self.is_grabbing and param_name in non_grabbing_params:
-                    print(f"Skipping {param_name} (cannot change while grabbing)")
-                    continue
-
-                # Get the parameter node from camera
-                try:
-                    param = getattr(self.camera, param_name)
-                    param.SetValue(param_value)
-                    print(f"Set {param_name} = {param_value}")
-                except AttributeError:
-                    print(f"Warning: Parameter '{param_name}' not found on this camera")
-                except Exception as e:
-                    print(f"Warning: Could not set {param_name}: {e}")
-
-            return True
-
-        except Exception as e:
-            print(f"Error applying custom settings: {e}")
-            return False
-
-    def get_current_settings(self) -> Dict[str, any]:
-        """
-        Retrieve current camera settings.
-
-        Returns:
-            Dictionary containing key camera parameters and their current values.
-        """
-        if not self.camera or not self.camera.IsOpen():
-            return {}
-
-        settings = {}
-
-        # List of parameters to retrieve
-        params_to_get = [
-            'ExposureTime',
-            'Gain',
-            'AcquisitionFrameRate',
-            'Width',
-            'Height',
-            'OffsetX',
-            'OffsetY',
-            'PixelFormat',
-            'BinningHorizontal',
-            'BinningVertical'
-        ]
-
-        for param_name in params_to_get:
-            try:
-                param = getattr(self.camera, param_name)
-                settings[param_name] = param.GetValue()
-            except:
-                # Parameter might not be available on all camera models
-                settings[param_name] = "N/A"
-
-        return settings
-
-    def get_image_dimensions(self) -> Tuple[int, int]:
-        """
-        Get the current image dimensions (width, height) from the camera.
-
-        Returns:
-            Tuple of (width, height) in pixels.
-        """
-        if not self.camera or not self.camera.IsOpen():
-            return (0, 0)
-
-        try:
-            width = self.camera.Width.GetValue()
-            height = self.camera.Height.GetValue()
-            return (width, height)
-        except:
-            return (0, 0)
-
-    def start_grabbing(self, strategy=pylon.GrabStrategy_LatestImageOnly):
-        """
-        Start continuous frame grabbing from the camera.
-
-        Args:
-            strategy: Grab strategy (default: LatestImageOnly for real-time)
-                     - GrabStrategy_LatestImageOnly: Skip frames to get latest
-                     - GrabStrategy_OneByOne: Process all frames sequentially
-        """
-        if not self.camera or not self.camera.IsOpen():
-            raise RuntimeError("Camera is not initialized")
-
-        # Only set acquisition mode if not already grabbing
-        # (setting it while grabbing will cause AccessException)
-        if not self.is_grabbing:
-            self.camera.AcquisitionMode.SetValue('Continuous')
-
-        # Start grabbing (only if not already started)
-        if not self.camera.IsGrabbing():
-            self.camera.StartGrabbing(strategy)
-            self.is_grabbing = True
-            print("Started frame grabbing")
-        else:
-            print("Camera already grabbing, skipping start")
-
-    def stop_grabbing(self):
-        """Stop frame grabbing."""
-        if self.camera and self.is_grabbing:
-            self.camera.StopGrabbing()
-            self.is_grabbing = False
-            print("Stopped frame grabbing")
-
-    def grab_frame(self, timeout_ms: int = 1000) -> Optional[np.ndarray]:
-        """
-        Grab a single frame from the camera.
-
-        Args:
-            timeout_ms: Timeout in milliseconds to wait for a frame.
-
-        Returns:
-            Frame as numpy array, or None if grab failed or timed out.
-        """
-        if not self.is_grabbing:
-            return None
-
-        try:
-            # Retrieve result with timeout
-            grab_result = self.camera.RetrieveResult(
-                timeout_ms,
-                pylon.TimeoutHandling_ThrowException
-            )
-
-            # Check if grab was successful
-            if grab_result.GrabSucceeded():
-                # Get image data as numpy array
-                frame = grab_result.Array.copy()
-                grab_result.Release()
-                return frame
-            else:
-                grab_result.Release()
-                return None
-
-        except Exception as e:
-            print(f"Error grabbing frame: {e}")
-            return None
+    def is_open(self) -> bool:
+        return self.camera is not None and self.camera.IsOpen()
 
     def close(self):
-        """
-        Close the camera and release all resources.
+        """Stop grabbing (if needed) and close the camera."""
+        if self.camera is None:
+            return
+        if self.camera.IsGrabbing():
+            self.camera.StopGrabbing()
+        if self.camera.IsOpen():
+            self.camera.Close()
+        self.camera = None
 
-        Should be called when done using the camera to properly clean up.
+    @property
+    def model_name(self) -> str:
+        return self.camera.GetDeviceInfo().GetModelName() if self.camera else ""
+
+    # ------------------------------------------------------------------
+    # Configuration
+    # ------------------------------------------------------------------
+    def load_pfs(self, pfs_path: str):
+        """
+        Load a .pfs configuration file (saved from pylon Viewer) into the camera.
+
+        Raises an exception if the file does not match this camera.
+        """
+        # The last argument (True) makes pylon validate every value it writes.
+        pylon.FeaturePersistence.Load(pfs_path, self.camera.GetNodeMap(), True)
+
+    def get_settings(self) -> Dict[str, object]:
+        """Return the current value of every editable and informative parameter."""
+        settings = {}
+        for name in EDITABLE_PARAMETERS + INFO_PARAMETERS:
+            try:
+                settings[name] = getattr(self.camera, name).GetValue()
+            except Exception:
+                # Parameter not available on this camera model.
+                settings[name] = None
+        return settings
+
+    def get_limits(self) -> Dict[str, Tuple[float, float, float]]:
+        """
+        Return (minimum, maximum, increment) for every editable parameter,
+        as reported by the camera right now.
+
+        Note: the limits of Width/Height/Offsets depend on binning and on each
+        other; the parameter window recomputes them from the sensor size.
+        """
+        limits = {}
+        for name in EDITABLE_PARAMETERS:
+            try:
+                node = getattr(self.camera, name)
+                try:
+                    increment = node.Inc
+                except Exception:
+                    increment = 0  # Float parameters without a fixed step
+                limits[name] = (node.Min, node.Max, increment)
+            except Exception:
+                pass  # Parameter not available on this camera model
+        return limits
+
+    def resulting_frame_rate(self) -> Optional[float]:
+        """
+        Frame rate the camera will really deliver with the current settings.
+
+        The camera computes it from exposure time, sensor readout time and USB
+        bandwidth limit. It is lower than the requested frame rate when the
+        settings do not allow the requested rate.
         """
         try:
-            # Stop grabbing if active
-            if self.is_grabbing:
-                self.stop_grabbing()
+            return float(self.camera.ResultingFrameRate.GetValue())
+        except Exception:
+            return None
 
-            # Close camera
-            if self.camera and self.camera.IsOpen():
-                self.camera.Close()
-                print("Camera closed successfully")
+    def _changed(self, settings: Dict[str, object]) -> Dict[str, object]:
+        """The values of 'settings' that differ from the values currently on the camera."""
+        current = self.get_settings()
+        return {name: value for name, value in settings.items()
+                if value is not None and current.get(name) != value}
 
-            self.camera = None
+    def changes_geometry(self, settings: Dict[str, object]) -> bool:
+        """True if writing 'settings' changes binning, size or offsets (needs grabbing stopped)."""
+        return any(name in GEOMETRY_PARAMETERS for name in self._changed(settings))
 
-        except Exception as e:
-            print(f"Error closing camera: {e}")
+    def apply_settings(self, settings: Dict[str, object]) -> List[str]:
+        """
+        Write new parameter values to the camera. Only values that differ from
+        the camera are written.
 
-    def __enter__(self):
-        """Context manager entry - allows using 'with' statement."""
-        return self
+        If binning, size or offsets change, the camera must NOT be grabbing
+        (check with changes_geometry()). The other parameters can be written
+        while the preview is running.
+        Values are written in an order that avoids range conflicts:
+        offsets to 0 -> binning -> width/height -> offsets -> frame rate -> exposure/gain/etc.
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit - ensures camera is closed."""
-        self.close()
+        Args:
+            settings: {pylon parameter name: value}. Unknown names are ignored.
 
+        Returns:
+            List of error messages (empty if every value was written).
+        """
+        errors = []
+        current = self.get_settings()
+        changed = self._changed(settings)
 
-def test_camera_connection():
-    """
-    Simple test function to verify camera connection and basic functionality.
+        def write(name, value):
+            try:
+                node = getattr(self.camera, name)
+                # Integer parameters must be a multiple of their increment (rounded down).
+                if isinstance(node.GetValue(), int):
+                    increment = max(int(node.Inc), 1)
+                    value = int(node.Min + ((int(value) - node.Min) // increment) * increment)
+                node.SetValue(value)
+            except Exception as e:
+                errors.append(f"{name} = {value}: {e}")
 
-    This function can be used for diagnostics.
-    """
-    print("Testing Basler camera connection...")
+        if any(name in GEOMETRY_PARAMETERS for name in changed):
+            # The whole geometry is rewritten (requested values, completed by the
+            # current ones), because the offsets are reset to 0 first so that a
+            # larger width/height is always allowed.
+            geometry = {name: settings.get(name, current.get(name)) for name in GEOMETRY_PARAMETERS}
+            for name in ('OffsetX', 'OffsetY'):
+                try:
+                    getattr(self.camera, name).SetValue(0)
+                except Exception as e:
+                    errors.append(f"{name} reset: {e}")
+            for name in GEOMETRY_PARAMETERS:
+                if geometry[name] is not None:
+                    write(name, geometry[name])
 
-    with BaslerCamera() as cam:
-        # Detect cameras
-        cameras = cam.detect_cameras()
-        print(f"\nDetected {len(cameras)} camera(s):")
-        for camera_info in cameras:
-            print(f"  - {camera_info['friendly_name']}")
-            print(f"    Serial: {camera_info['serial_number']}")
+        # The frame rate is only respected if the frame rate limit is enabled.
+        if settings.get('AcquisitionFrameRate') is not None and not current.get('AcquisitionFrameRateEnable'):
+            try:
+                self.camera.AcquisitionFrameRateEnable.SetValue(True)
+                changed['AcquisitionFrameRate'] = settings['AcquisitionFrameRate']
+            except Exception as e:
+                errors.append(f"AcquisitionFrameRateEnable: {e}")
+        for name in ('AcquisitionFrameRate', 'ExposureTime', 'Gain', 'Gamma', 'BlackLevel'):
+            if name in changed:
+                write(name, changed[name])
 
-        if len(cameras) == 0:
-            print("No cameras detected!")
-            return False
+        return errors
 
-        # Initialize first camera
-        print("\nInitializing first camera...")
-        if cam.initialize_camera():
-            # Get current settings
-            settings = cam.get_current_settings()
-            print("\nCurrent camera settings:")
-            for key, value in settings.items():
-                print(f"  {key}: {value}")
+    # ------------------------------------------------------------------
+    # Frame grabbing
+    # ------------------------------------------------------------------
+    def start_grabbing(self, for_recording: bool):
+        """
+        Start continuous acquisition.
 
-            # Try to grab a test frame
-            print("\nAttempting to grab a test frame...")
-            cam.start_grabbing()
-            frame = cam.grab_frame(timeout_ms=2000)
-            cam.stop_grabbing()
-
-            if frame is not None:
-                print(f"Successfully grabbed frame: {frame.shape}")
-                print("Camera test PASSED!")
-                return True
-            else:
-                print("Failed to grab frame")
-                return False
+        Args:
+            for_recording: True  -> keep every frame, in order (no frame is skipped
+                                    on purpose; dropped frames can be counted).
+                           False -> preview: always return the newest frame only.
+        """
+        self.camera.AcquisitionMode.SetValue('Continuous')
+        pixel_format = self.camera.PixelFormat.GetValue()
+        if pixel_format == 'Mono8':
+            self._converter = None
         else:
-            print("Failed to initialize camera")
-            return False
+            # Convert other formats to 8 bits, because MP4 files store 8-bit images.
+            self._converter = pylon.ImageFormatConverter()
+            if pixel_format.startswith('Mono'):
+                self._converter.OutputPixelFormat = pylon.PixelType_Mono8
+            else:
+                self._converter.OutputPixelFormat = pylon.PixelType_BGR8packed
 
+        if for_recording:
+            self.camera.MaxNumBuffer.SetValue(RECORDING_BUFFER_COUNT)
+            self.camera.StartGrabbing(pylon.GrabStrategy_OneByOne)
+        else:
+            self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 
-if __name__ == "__main__":
-    # Run test when module is executed directly
-    test_camera_connection()
+    def stop_grabbing(self):
+        if self.camera is not None and self.camera.IsGrabbing():
+            self.camera.StopGrabbing()
+
+    def grab(self, timeout_ms: int = 1000) -> Tuple[Optional[np.ndarray], Optional[int], bool]:
+        """
+        Wait for the next frame.
+
+        Returns:
+            (frame, block_id, incomplete)
+            - frame: image as numpy array, or None if no complete frame arrived
+            - block_id: frame counter set by the camera (used to detect dropped frames)
+            - incomplete: True if the camera sent a frame that arrived damaged
+        """
+        result = self.camera.RetrieveResult(timeout_ms, pylon.TimeoutHandling_Return)
+        if result is None or not result.IsValid():
+            return None, None, False  # Timeout: no frame arrived
+        try:
+            block_id = result.GetBlockID()
+            if not result.GrabSucceeded():
+                return None, block_id, True
+            if self._converter is None:
+                frame = result.Array  # pypylon returns a copy, safe to keep
+            else:
+                frame = self._converter.Convert(result).Array
+            return frame, block_id, False
+        finally:
+            result.Release()

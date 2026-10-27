@@ -1,0 +1,5 @@
+# Packages needed to BUILD the ready-to-use program (MultiCamRecorder.exe).
+# Users of the program or of the source code do not need this file.
+-r requirements.txt
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.9

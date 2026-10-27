@@ -1,76 +1,82 @@
-# Quick Start Guide
+# MultiCam Recorder - Quick Start Guide
 
-For users who have already completed the installation.
+For users who have already completed the installation (see README.md).
 
 ## Starting the Application
 
-### Method 1: Double-Click (Easiest)
-1. Double-click `start_app.bat` in the application folder
-2. Wait for the window to open
+- **Ready-to-use program:** double-click `MultiCamRecorder.exe` in the folder `MultiCamRecorder`
+  (or its desktop shortcut).
+- **Source code:** double-click `start_app.bat` in the folder of the application, or in a Command Prompt:
+  ```bat
+  cd C:\path\to\the\folder\of\the\application
+  venv\Scripts\activate
+  python main.py
+  ```
 
-### Method 2: Command Line
-```bash
-cd C:\path\to\LUPE_recordings_with_basler
-venv\Scripts\activate
-python main.py
-```
+To quit, close the program window (it stops running recordings properly and saves the files).
 
-## Recording a Video (5 Steps)
+## Recording Videos (6 Steps)
 
-1. **Load Config**: Browse → Select `LUPE CAMERA SETTINGS.pfs`
-2. **Output Folder**: Browse → Choose where to save videos
-3. **Duration**: Enter minutes (e.g., `5` for 5 minutes)
-4. **Name**: Enter suffix (e.g., `Mouse001`)
-5. **Record**: Click "Start Recording"
+1. **Cameras tab**: tick `Use` for each camera you need (max 6).
+   BASLER (blue) = Basler camera, USB (orange) = other USB camera.
+   Click `Set...` to give a camera a nickname (e.g. `box1`).
+2. **Config**: `Browse...` → select `LUPE CAMERA SETTINGS.pfs` (loaded into all Basler cameras).
+   Optional: `Parameters...` to change Basler settings. Changes are shown live in the preview;
+   read the orange/red warnings, then `Apply` to keep them.
+3. **Preview**: `Start preview`, choose the layout (1x2, 2x2, 2x3) and which camera goes where.
+4. **Experiment settings tab (optional, can be skipped)**: `Import Excel...`
+   (columns `recording_round_number`, `camera`, `animals`) or `Load experiment settings...`.
+5. **Recording tab**: output folder, duration (choose minutes or hours), recording round,
+   all cameras together or in groups, Record button or start time.
+6. **Record**: `Record now` (or `Schedule start`). Recordings stop after the duration, or with `Stop`.
 
-## Optional: Preview First
+Tip: `Save recording settings...` stores the whole setup; `Load recording settings...` restores it.
 
-- Click "Start Preview" before recording
-- Check camera position and brightness
-- Close preview window when ready
+## Settings in the example file `LUPE CAMERA SETTINGS.pfs` (Basler)
 
-## Important Settings for 60 FPS
-
-- **Exposure Time**: 1546 µs (or less)
+- **Frame rate**: 59.9988 fps (about 60)
+- **Exposure Time**: 1546 µs (must stay below 16,667 µs, the time between frames at 60 fps)
 - **Gain**: 10 dB (adjust for brightness)
-- **Resolution**: 768 x 770
+- **Image size**: 768 x 770 px
 - **Binning**: 2x2
 
 ## Output Files Location
 
-Look in your chosen Output Directory:
-- Video: `[name]_[date]_[time].mp4`
-- Metadata: `[name]_[date]_[time]_metadata.json`
+Look in your chosen output folder:
+- Video: `[YYYYMMDD]_[HHMMSS]_[camera]_[round]_[animals].mp4`
+  (without experiment settings: `[YYYYMMDD]_[HHMMSS]_[camera].mp4`)
+- Metadata: same name + `_metadata.json` (frames, fps, duration, dropped frames, camera settings, animals)
 
 ## Common Issues
 
-### Camera Not Detected
-- Check USB3 cable connection
-- Close pylon Viewer if open
-- Restart application
+### Camera Not Detected / "in use"
+- Check the USB3 cable connection
+- Close pylon Viewer or another instance of this application
+- Click `Detect cameras`
 
 ### Video Too Dark
-- Increase Exposure Time (Settings dialog)
-- Increase Gain (Settings dialog)
+- Increase Exposure Time or Gain (`Parameters...`)
 - Check camera lens cap is removed
 
-### FPS Lower Than 60
-- Reduce Exposure Time to ≤ 1546 µs
+### Frame Rate Lower Than Requested
+- `Parameters...` shows the frame rate the camera can reach and, in red, why it is lower
+- Exposure Time must be shorter than the time between frames (16,667 µs at 60 fps)
 - Check USB3 connection (not USB2)
-- Reduce resolution if needed
+- Reduce resolution if needed (the parameter window shows the data rate)
+
+### USB (non-Basler) cameras
+- Their frame rate is measured during the first 2 s of each recording
+- Dropped frames cannot be counted for them
 
 ## Need More Help?
 
 See the full **README.md** for:
 - Complete installation instructions
+- Detailed description of every tab
 - Detailed troubleshooting
 - Camera settings explanations
 - FAQ
 
-## Keyboard Shortcuts
-
-- `ESC` - Stop recording (when preview window is focused)
-
 ---
 
-**Remember**: Connect camera → Load config → Choose folder → Set duration → Record!
+**Remember**: Accept cameras → Load config → Preview → (Experiment settings) → Record!

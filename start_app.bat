@@ -1,9 +1,9 @@
 @echo off
-REM LUPE Basler Camera Recording Application Launcher
+REM MultiCam Recorder launcher (when running from the source code)
 REM Double-click this file to start the application
 
 echo ========================================
-echo LUPE Basler Camera Recording App
+echo MultiCam Recorder
 echo ========================================
 echo.
 
@@ -54,6 +54,7 @@ if errorlevel 1 (
 
 REM Start the application
 echo Starting application...
+echo DO NOT CLOSE THIS WINDOW WHILE RECORDING. To quit, close the application window.
 echo.
 python main.py
 
