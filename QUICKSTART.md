@@ -20,10 +20,11 @@ To quit, close the program window (it stops running recordings properly and save
 1. **Cameras tab**: tick `Use` for each camera you need (max 6).
    BASLER (blue) = Basler camera, USB (orange) = other USB camera.
    Click `Set...` to give a camera a nickname (e.g. `box1`).
-2. **Config**: `Browse...` → select `LUPE CAMERA SETTINGS.pfs` (loaded into all Basler cameras).
+2. **Config** (box "Basler parameters"): `Load one .pfs file into all Basler cameras...`, or
+   `Load .pfs...` in the row of a camera to give it its own file (e.g. `LUPE CAMERA SETTINGS.pfs`).
    Optional: `Parameters...` to change Basler settings. Changes are shown live in the preview;
    read the orange/red warnings, then `Apply` to keep them.
-3. **Preview**: `Start preview`, choose the layout (1x2, 2x2, 2x3) and which camera goes where.
+3. **Preview**: `Start preview`, choose the layout (1x1, 1x2, 2x2, 2x3, 3x2) and which camera goes where.
 4. **Experiment settings tab (optional, can be skipped)**: `Import Excel...`
    (columns `recording_round_number`, `camera`, `animals`) or `Load experiment settings...`.
 5. **Recording tab**: output folder, duration (choose minutes or hours), recording round,
@@ -32,13 +33,20 @@ To quit, close the program window (it stops running recordings properly and save
 
 Tip: `Save recording settings...` stores the whole setup; `Load recording settings...` restores it.
 
-## Settings in the example file `LUPE CAMERA SETTINGS.pfs` (Basler)
+## Example settings files (folder `example_camera_config_file`)
 
-- **Frame rate**: 59.9988 fps (about 60)
-- **Exposure Time**: 1546 µs (must stay below 16,667 µs, the time between frames at 60 fps)
-- **Gain**: 10 dB (adjust for brightness)
-- **Image size**: 768 x 770 px
-- **Binning**: 2x2
+Basler settings used to record videos for LUPE analysis (details and the paper in
+`example_camera_config_file/README.md`):
+
+| File | Image | Exposure | Gain | Frame rate | TTL output per frame |
+|---|---|---|---|---|---|
+| `LUPE CAMERA SETTINGS.pfs` | 768 x 770 px | 1550 µs | 10 dB | 59.9988 fps (about 60) | no |
+| `LUPE_CAMERA_SETTINGS_TTL_FRAMES_SEND.pfs` | 768 x 770 px | 1550 µs | 10 dB | 59.9988 fps (about 60) | yes (Line4) |
+| `TOP_VIEW_CAMERA_SETTINGS.pfs` | 1032 x 384 px | 4200 µs | 12 dB | 32 fps | no |
+| `TOP_VIEW_CAMERA_SETTINGS_TTL_FRAMES_SEND.pfs` | 1032 x 384 px | 4200 µs | 12 dB | 32 fps | yes (Line4) |
+
+All use 2x2 binning. The exposure time must stay below the time between frames
+(16,667 µs at 60 fps, 31,250 µs at 32 fps).
 
 ## Output Files Location
 

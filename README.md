@@ -9,7 +9,8 @@ the ready-to-use program, extract it, and double-click it.
 **What it does:**
 - Finds all connected Basler and USB cameras and shows clearly which is which
 - Lets you give each camera a nickname (e.g. `box1`)
-- Shows all cameras at the same time (layouts 1x2, 2x2 or 2x3); you choose which camera goes where
+- Shows all cameras at the same time (layouts 1x1, 1x2, 2x2, 2x3 or 3x2); you choose which camera goes where
+- Loads a Basler configuration file (`.pfs`) into each Basler camera: the same file for all, or one per camera
 - Lets you adjust Basler camera settings with sliders, shows the change live, and warns you when a change
   lowers image quality or makes dropped frames more likely
 - Starts all cameras together or in groups, with a button or at a time you choose
@@ -49,7 +50,9 @@ the ready-to-use program, extract it, and double-click it.
 - [Troubleshooting](#troubleshooting)
 - [FAQ](#faq)
 - [Camera settings explained](#camera-settings-explained)
+  - [Example settings files (LUPE)](#example-settings-files-lupe)
 - [For developers](#for-developers)
+  - [Publishing a new version of the ready-to-use program](#publishing-a-new-version-of-the-ready-to-use-program)
 
 ---
 
@@ -248,14 +251,18 @@ folders are in `%LOCALAPPDATA%\MultiCam Recorder` instead (type this in the File
 1. **Connect the cameras** and start the application (double-click `MultiCamRecorder.exe`, or
    `start_app.bat` if you use the source code).
    The cameras are detected automatically and listed in the tab **"1. Cameras"**.
-2. **Choose the Basler configuration file:** next to "Configuration file (.pfs)", click **Browse...**
-   and select `example_camera_config_file\LUPE CAMERA SETTINGS.pfs` in the folder of the program
-   (or your own `.pfs` file).
-3. **Accept the cameras:** tick **Use** for every camera you want to record (maximum 6).
+2. **Accept the cameras:** tick **Use** for every camera you want to record (maximum 6).
+3. **Load the Basler configuration file(s)** in the box "Basler parameters" (below the camera list):
+   - same file for all Basler cameras: click **Load one .pfs file into all Basler cameras...**;
+   - one file per camera: click **Load .pfs...** in the row of that camera.
+
+   Select e.g. `example_camera_config_file\LUPE CAMERA SETTINGS.pfs` in the folder of the program
+   (or your own `.pfs` file). The name of the file loaded into each camera is shown in its row.
+   The example files are described in [Example settings files (LUPE)](#example-settings-files-lupe).
 4. **(Optional) Give nicknames:** click **Set...** next to a camera and type a name such as `box1`.
    The nickname is used in the video file names and is remembered on this computer.
-5. **Check the image:** click **Start preview** (right side). Choose a layout (1x2, 2x2, 2x3) and,
-   above each image, which camera is shown there. Adjust the camera position, focus and light.
+5. **Check the image:** click **Start preview** (right side). Choose a layout (1x1, 1x2, 2x2, 2x3, 3x2)
+   and, above each image, which camera is shown there. Adjust the camera position, focus and light.
 6. **(Optional) Adjust a Basler camera:** click **Parameters...**. Move the sliders: the preview changes
    immediately. Read the orange/red warnings, then click **Apply** to keep the changes.
 7. Open the tab **"2. Recording"**:
@@ -294,10 +301,15 @@ folders are in `%LOCALAPPDATA%\MultiCam Recorder` instead (type this in the File
   Excel file. Nicknames are remembered on this computer (`config/camera_nicknames.json`).
   A camera without nickname is called e.g. `Basler-25370801` or `USB-0`.
 - **Basler parameters**:
-  - **Browse...** the configuration file (`.pfs`, e.g. `example_camera_config_file/LUPE CAMERA SETTINGS.pfs`).
-    It is loaded into every accepted Basler camera, and the resulting settings are shown in the table and the log.
+  - Configuration files (`.pfs`, e.g. `example_camera_config_file/LUPE CAMERA SETTINGS.pfs`):
+    one row per accepted Basler camera shows the file loaded into it.
+    **Load .pfs...** loads a file into that camera only; **Load one .pfs file into all Basler cameras...**
+    loads the same file into all of them. Loading a file replaces the camera's current parameters;
+    the resulting settings are shown in the table and the log. A camera without a file keeps the
+    settings it already had.
   - **All Basler cameras use the same parameters**: when ticked, the parameters of the first Basler
-    camera are copied to the others, and every change is applied to all Basler cameras.
+    camera are copied to the others, and every change is applied to all Basler cameras
+    (including **Load .pfs...**, which then loads the file into all Basler cameras).
   - **Parameters...** opens the parameter window (one camera at a time, or all Basler cameras when shared):
     - one slider and one box per parameter, with the range accepted by the camera;
     - **every change is shown live in the preview** before you click **Apply**
@@ -316,7 +328,9 @@ folders are in `%LOCALAPPDATA%\MultiCam Recorder` instead (type this in the File
 ### Preview (right side)
 
 - **Start preview** / **Stop preview** shows all accepted cameras at the same time.
-- Choose the **layout**: `1x2`, `2x2` or `2x3`. Layouts with fewer positions than accepted cameras are disabled.
+- Choose the **layout** (rows x columns): `1x1`, `1x2`, `2x2`, `2x3` or `3x2`. Layouts with fewer
+  positions than accepted cameras are disabled, so that every camera is always visible
+  (e.g. `1x1` can be chosen when one camera is accepted).
 - Choose **which camera goes in which position** with the drop-down above each position
   (choosing a camera that is already shown elsewhere swaps the two positions).
 - The **whole field of view** of each camera is always shown (the image is scaled down, never cut).
@@ -364,7 +378,7 @@ Excel file (`.xlsx`; only the first sheet is read) with these three columns:
 ### Saving and loading the recording settings
 
 **Save recording settings...** stores the whole setup in a file (in the folder `saved_settings` by default):
-accepted cameras and nicknames, Basler parameters, `.pfs` file, shared parameters, preview layout and
+accepted cameras and nicknames, the `.pfs` file and Basler parameters of each camera, shared parameters, preview layout and
 positions, groups and their start mode/time, duration and output folder.
 **Load recording settings...** restores it and reports cameras that are not connected.
 
@@ -391,7 +405,8 @@ Notepad, or read it with Python, MATLAB, R...). Main sections:
 - `recording`: start and end time, requested and measured duration, **`number_of_frames`**,
   **`measured_fps`**, **`frames_dropped`**, incomplete frames, whether it was stopped by the user, errors.
 - `camera`: type (Basler/USB), serial number or index, nickname, model, all camera settings.
-- `experiment`: video name, recording round, animals, start group, start trigger (button or time), `.pfs` file.
+- `experiment`: video name, recording round, animals, start group, start trigger (button or time),
+  the `.pfs` file last loaded into this camera (the actual settings used are in `camera`).
 
 **Notes on USB (non-Basler) cameras:**
 - Windows does not report their real frame rate reliably, so it is **measured during the first
@@ -470,7 +485,8 @@ Do it in the folder that contains `start_app.bat`.
 
 - In **Parameters...**, the line below the sliders shows the frame rate the camera can reach.
   If it is lower than requested, the red panel tells you why.
-- The **exposure time** must be shorter than the time between frames (16,667 µs at 60 fps).
+- The **exposure time** must be shorter than the time between frames (16,667 µs at 60 fps,
+  31,250 µs at 32 fps).
 - Smaller images (size, binning) need less USB bandwidth.
 - Use a USB3 port (not USB2). With several Basler cameras, spread them over different USB3 ports/controllers.
 - Save videos to a fast local disk (not a network drive), especially with several cameras.
@@ -508,8 +524,8 @@ It depends on the image size, the frame rate and how much the image changes. Mak
 recording and multiply its file size by the planned duration.
 
 **Can I make my own .pfs configuration file?**
-Yes: set up the camera in pylon Viewer and save the features as a `.pfs` file, then select it in the
-tab "1. Cameras".
+Yes: set up the camera in pylon Viewer and save the features as a `.pfs` file, then load it in the
+tab "1. Cameras" (box "Basler parameters"). Each Basler camera can have its own file.
 
 **Does it work on Mac or Linux?**
 It was written and tested for Windows only.
@@ -533,6 +549,22 @@ The exact ranges depend on the camera model; the parameter window shows the rang
 
 Width and height are always set to even numbers, because MP4 videos require even sizes.
 
+### Example settings files (LUPE)
+
+The folder `example_camera_config_file` contains example settings for the Basler cameras used to record
+videos for **LUPE** (Light Automated Pain Evaluator) analysis, introduced in
+[Oswell, Rogers, James et al., *Mimicking opioid analgesia in cortical pain circuits*, Nature (2026)](https://www.nature.com/articles/s41586-025-09908-w):
+
+| File | Image | Exposure | Gain | Frame rate | TTL output per frame |
+|---|---|---|---|---|---|
+| `LUPE CAMERA SETTINGS.pfs` | 768 x 770 px | 1550 µs | 10 dB | 59.9988 fps (about 60) | no |
+| `LUPE_CAMERA_SETTINGS_TTL_FRAMES_SEND.pfs` | 768 x 770 px | 1550 µs | 10 dB | 59.9988 fps (about 60) | yes (Line4) |
+| `TOP_VIEW_CAMERA_SETTINGS.pfs` | 1032 x 384 px | 4200 µs | 12 dB | 32 fps | no |
+| `TOP_VIEW_CAMERA_SETTINGS_TTL_FRAMES_SEND.pfs` | 1032 x 384 px | 4200 µs | 12 dB | 32 fps | yes (Line4) |
+
+Use the `_TTL_FRAMES_SEND` files only if equipment is connected to the camera's I/O lines to receive
+one pulse per frame. Details: `example_camera_config_file/README.md`.
+
 ---
 
 ## For developers
@@ -550,8 +582,12 @@ The program is built automatically by GitHub (`.github/workflows/release.yml`) o
 machine, with PyInstaller (`MultiCamRecorder.spec`, `build_release.py`).
 
 1. Change `APP_VERSION` in `src/app_info.py` (e.g. `1.0.1`), commit and push.
+   Every release needs a new version number (a tag can only be used once).
 2. (Recommended) Test the build first: on GitHub, **Actions** > **Build Windows release** > **Run workflow**.
-   When it finishes, download the ZIP from the run page and test it on a computer **without Python**.
+   When it finishes, download the ZIP from the bottom of the run page (**Artifacts**; GitHub puts it
+   inside another ZIP) and test it on a computer **without Python**.
+   This is only a test build: it is **not** a release, nobody else sees it, and GitHub deletes it
+   after 90 days.
 3. Publish: create and push a tag with the same version:
    ```bat
    git tag v1.0.1
@@ -559,6 +595,10 @@ machine, with PyInstaller (`MultiCamRecorder.spec`, `build_release.py`).
    ```
    GitHub builds the program and creates the release with the ZIP file
    (the build stops if the tag does not match `APP_VERSION`).
+
+Older releases do not need to be deleted: the newest one is marked **Latest**, and the download link
+of Part 1A (`.../releases/latest`) always opens it. Keeping the older ones lets users go back to a
+previous version.
 
 To build on your own computer instead (Windows, Python 3.13, in a fresh virtual environment):
 
@@ -581,7 +621,7 @@ folder of the application/
 ├── build_release.py              # Builds the program folder and the release ZIP
 ├── .github/workflows/release.yml # Automatic build and release on GitHub
 ├── README.md / QUICKSTART.md     # Documentation
-├── example_camera_config_file/   # Example Basler configuration (LUPE CAMERA SETTINGS.pfs)
+├── example_camera_config_file/   # Example Basler settings for LUPE (.pfs files and their README)
 ├── src/
 │   ├── app_info.py               # Application name and version
 │   ├── camera/                   # Camera detection, Basler and USB cameras, parameter warnings
@@ -600,4 +640,4 @@ folder of the application/
 
 Internal research use only.
 
-**Last updated**: 2026-10-27
+**Last updated**: 2026-10-30
