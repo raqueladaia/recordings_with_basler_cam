@@ -2,7 +2,8 @@
 Preview Grid Module
 
 Shows the live image of all accepted cameras side by side inside the main
-window, in a layout of 1x2, 2x2 or 2x3 positions. Above every position a
+window, in a layout of 1x1, 1x2, 2x2, 2x3 or 3x2 positions (rows x columns).
+Above every position a
 drop-down list lets the user choose which camera is shown there. Choosing a
 camera that is already shown elsewhere swaps the two positions.
 
@@ -19,8 +20,10 @@ import numpy as np
 from PIL import Image, ImageTk
 
 
-# Layout name -> (rows, columns)
-LAYOUTS = {"1x2": (1, 2), "2x2": (2, 2), "2x3": (2, 3)}
+# Layout name -> (rows, columns). Ordered from fewest to most positions: when the
+# chosen layout is too small for the accepted cameras, the first one that fits is used.
+# At most 3 rows and 3 columns (see _build_tiles).
+LAYOUTS = {"1x1": (1, 1), "1x2": (1, 2), "2x2": (2, 2), "2x3": (2, 3), "3x2": (3, 2)}
 EMPTY_POSITION = "(empty)"
 
 
