@@ -83,7 +83,7 @@ RemoveParameterLimitSelector	Gain
 PgiMode	Off
 ShutterMode	Global
 ExposureMode	Timed
-ExposureTime	1546.0
+ExposureTime	1550.0
 AcquisitionBurstFrameCount	1
 TriggerSelector	FrameBurstStart
 TriggerMode	Off
