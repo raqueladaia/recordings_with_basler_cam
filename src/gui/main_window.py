@@ -5,8 +5,9 @@ Main window of MultiCam Recorder, the multi-camera recording application.
 
 Left side (tabs):
 - Cameras:    detect Basler and USB cameras, accept up to 6, give nicknames,
-              choose the Basler .pfs file, shared or individual Basler parameters,
-              open the parameter window of one camera.
+              load a .pfs file into each Basler camera (or one file into all),
+              shared or individual Basler parameters, open the parameter window
+              of one camera.
 - Recording:  output folder, duration, start all cameras together or in groups,
               start each group with a button or at a given time, record / stop.
 - Experiment: import the Excel file with the animals of each camera per round,
@@ -14,7 +15,7 @@ Left side (tabs):
 - Buttons to save / load the "Recording settings".
 - Status log.
 
-Right side: live preview of all accepted cameras (1x2, 2x2 or 2x3).
+Right side: live preview of all accepted cameras (1x1, 1x2, 2x2, 2x3 or 3x2).
 
 Threads: each camera has a CameraWorker thread (preview or recording). This
 window only reads the newest frames and handles the workers' messages in
@@ -60,6 +61,7 @@ class AcceptedCamera:
     camera: object                 # BaslerCamera or UsbCamera
     worker: CameraWorker
     group_var: tk.IntVar           # Start group (used in "groups" mode)
+    pfs_file: Optional[str] = None  # Last .pfs file loaded into this camera (Basler only)
 
 
 @dataclass
@@ -95,8 +97,8 @@ class MainWindow:
         self._in_tick = False
         self._camera_rows: Dict[str, Dict[str, object]] = {}
         self._group_combos: Dict[str, ttk.Combobox] = {}   # Camera key -> its group drop-down
+        self._pfs_buttons: List[ttk.Button] = []           # "Load .pfs..." button of each Basler camera
 
-        self.pfs_var = tk.StringVar()
         self.shared_var = tk.BooleanVar(value=False)
         self.output_dir_var = tk.StringVar()
         self.duration_var = tk.StringVar(value="1")
@@ -183,17 +185,20 @@ class MainWindow:
 
         basler = ttk.LabelFrame(tab, text="Basler parameters", padding=8)
         basler.grid(row=3, column=0, sticky=tk.EW, pady=(12, 0))
-        basler.columnconfigure(1, weight=1)
-        ttk.Label(basler, text="Configuration file (.pfs):").grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(basler, textvariable=self.pfs_var, foreground='blue', wraplength=380).grid(
-            row=0, column=1, sticky=tk.W, padx=6)
-        self.pfs_button = ttk.Button(basler, text="Browse...", command=self._browse_pfs)
-        self.pfs_button.grid(row=0, column=2)
-        ttk.Label(basler, text="The .pfs file is loaded into every accepted Basler camera.",
-                  foreground='gray').grid(row=1, column=0, columnspan=3, sticky=tk.W)
+        basler.columnconfigure(0, weight=1)
+        ttk.Label(basler, wraplength=620, justify=tk.LEFT, foreground='gray', text=(
+            "Configuration file (.pfs) of each accepted Basler camera. Loading a file replaces the "
+            "camera's current parameters. Each camera can have its own file.")
+        ).grid(row=0, column=0, sticky=tk.W)
+        # One row per accepted Basler camera, filled by _rebuild_pfs_table().
+        self.pfs_table = ttk.Frame(basler)
+        self.pfs_table.grid(row=1, column=0, sticky=tk.EW, pady=(4, 0))
+        self.pfs_all_button = ttk.Button(basler, text="Load one .pfs file into all Basler cameras...",
+                                         command=lambda: self._choose_pfs(self._baslers()))
+        self.pfs_all_button.grid(row=2, column=0, sticky=tk.W, pady=(6, 0))
         self.shared_check = ttk.Checkbutton(basler, text="All Basler cameras use the same parameters",
                                             variable=self.shared_var, command=self._on_shared_toggled)
-        self.shared_check.grid(row=2, column=0, columnspan=3, sticky=tk.W, pady=(6, 0))
+        self.shared_check.grid(row=3, column=0, sticky=tk.W, pady=(6, 0))
 
     def _build_recording_tab(self, tab):
         tab.columnconfigure(1, weight=1)
@@ -302,7 +307,8 @@ class MainWindow:
         baslers = sum(e.kind == "Basler" for e in detected)
         self._log(f"Found {baslers} Basler camera(s) and {len(detected) - baslers} USB camera(s).")
         for e in detected:
-            note = "" if e.accessible else "  (in use by another program)"
+            # Accepted cameras are open in this program, so they are not accessible to the detection.
+            note = "" if e.accessible or e.key in self.accepted else "  (in use by another program)"
             self._log(f"  {e.label}  model {e.model}{note}")
         self._rebuild_camera_table()
         self._on_cameras_changed()
@@ -396,7 +402,8 @@ class MainWindow:
 
     def _accept_camera(self, entry: CameraEntry, copy_shared: bool) -> Tuple[bool, str]:
         """
-        Open a camera and prepare it (load the .pfs file, shared parameters).
+        Open a camera and prepare it (shared parameters). The .pfs file of a Basler
+        camera is loaded afterwards by the user (Basler parameters box).
 
         Returns:
             (accepted, message) - message explains a failure or lists warnings.
@@ -413,15 +420,8 @@ class MainWindow:
         self._log(f"Accepted {entry.label}.")
         warnings = []
         if entry.kind == "Basler":
-            if self.pfs_var.get():
-                try:
-                    camera.load_pfs(self.pfs_var.get())
-                    self._log(f"  Loaded {Path(self.pfs_var.get()).name} into {entry.name}.")
-                except Exception as e:
-                    warnings.append(f"The .pfs file could not be loaded into {entry.label}:\n{e}")
-                    self._log(f"ERROR {entry.label}: .pfs not loaded: {e}")
-            else:
-                self._log(f"WARNING {entry.label}: no .pfs file selected, the camera keeps its current settings.")
+            self._log(f"  No .pfs file loaded into {entry.name} yet: it keeps its current settings "
+                      f"(load one in the 'Basler parameters' box).")
             source = next((a for a in self.accepted.values()
                            if a.entry.kind == "Basler" and a is not acc), None)
             if copy_shared and self.shared_var.get() and source is not None:
@@ -541,8 +541,38 @@ class MainWindow:
                         acc.camera.resulting_frame_rate(), other_rate, len(targets),
                         write_values, on_applied, on_discarded)
 
-    def _browse_pfs(self):
-        path = filedialog.askopenfilename(title="Select the Basler configuration file",
+    def _rebuild_pfs_table(self):
+        """One row per accepted Basler camera: its .pfs file and a button to load another one."""
+        for child in self.pfs_table.winfo_children():
+            child.destroy()
+        self._pfs_buttons = []
+        baslers = self._baslers()
+        if not baslers:
+            ttk.Label(self.pfs_table, text="No Basler camera accepted.", foreground='gray').grid(
+                row=0, column=0, sticky=tk.W)
+        for r, acc in enumerate(baslers):
+            ttk.Label(self.pfs_table, text=acc.entry.label).grid(row=r, column=0, sticky=tk.W, padx=(0, 8))
+            if acc.pfs_file:
+                ttk.Label(self.pfs_table, text=Path(acc.pfs_file).name, foreground='blue').grid(
+                    row=r, column=1, sticky=tk.W)
+            else:
+                ttk.Label(self.pfs_table, text="(no .pfs file loaded: current camera settings)",
+                          foreground='gray').grid(row=r, column=1, sticky=tk.W)
+            # In shared mode all Basler cameras get the same file, as for the other parameters.
+            button = ttk.Button(self.pfs_table, text="Load .pfs...",
+                                command=lambda a=acc: self._choose_pfs(
+                                    self._baslers() if self.shared_var.get() else [a]))
+            button.grid(row=r, column=2, padx=(8, 0), pady=1)
+            self._pfs_buttons.append(button)
+        self.pfs_table.columnconfigure(1, weight=1)
+
+    def _choose_pfs(self, targets: List[AcceptedCamera]):
+        """Ask the user for a .pfs file and load it into the given Basler cameras."""
+        if not targets:
+            messagebox.showinfo("No Basler camera", "Accept at least one Basler camera first (tick 'Use').")
+            return
+        names = ", ".join(a.entry.name for a in targets)
+        path = filedialog.askopenfilename(title=f"Select the .pfs configuration file for: {names}",
                                           filetypes=[("pylon Feature Stream", "*.pfs"), ("All files", "*.*")])
         if not path:
             return
@@ -550,26 +580,28 @@ class MainWindow:
         if not ok:
             messagebox.showerror("Invalid file", error)
             return
-        self.pfs_var.set(path)
-        self._log(f"Configuration file selected: {path}")
-        baslers = self._baslers()
-        if baslers and messagebox.askyesno(
-                "Load configuration file",
-                f"Load {Path(path).name} into the {len(baslers)} accepted Basler camera(s) now?\n"
-                "Their current parameters will be replaced."):
-            errors = []
-            for acc in baslers:
-                with self._camera_paused(acc):
-                    try:
-                        acc.camera.load_pfs(path)
-                        self._log(f"Loaded {Path(path).name} into {acc.entry.label}.")
-                        self._log_camera_settings(acc)
-                    except Exception as e:
-                        errors.append(f"{acc.entry.label}: {e}")
-                        self._log(f"ERROR {acc.entry.label}: .pfs not loaded: {e}")
-            if errors:
-                messagebox.showerror("Configuration file not loaded", "\n\n".join(errors))
-            self._refresh_camera_rows()
+        errors = [e for e in (self._load_pfs(acc, path) for acc in targets) if e]
+        if errors:
+            messagebox.showerror("Configuration file not loaded", "\n\n".join(errors))
+        self._refresh_camera_rows()
+        self._rebuild_pfs_table()
+        self._refresh_controls()
+
+    def _load_pfs(self, acc: AcceptedCamera, path: str) -> str:
+        """
+        Load a .pfs file into one Basler camera (its preview pauses meanwhile).
+        Returns an error message, or an empty string if the file was loaded.
+        """
+        with self._camera_paused(acc):
+            try:
+                acc.camera.load_pfs(path)
+            except Exception as e:
+                self._log(f"ERROR {acc.entry.label}: {Path(path).name} not loaded: {e}")
+                return f"{Path(path).name} could not be loaded into {acc.entry.label}:\n{e}"
+        acc.pfs_file = path
+        self._log(f"Loaded {path} into {acc.entry.label}.")
+        self._log_camera_settings(acc)
+        return ""
 
     def _on_shared_toggled(self):
         baslers = self._baslers()
@@ -638,6 +670,7 @@ class MainWindow:
         """Refresh everything that depends on the accepted cameras, their names or groups."""
         self.preview_grid.set_cameras({k: a.entry.label for k, a in self.accepted.items()})
         self._refresh_camera_rows()
+        self._rebuild_pfs_table()
         self._rebuild_group_selectors()
         self._rebuild_groups()
         self._update_names_preview()
@@ -857,7 +890,7 @@ class MainWindow:
                 'start_trigger': "scheduled time" if scheduled else "record button",
                 'scheduled_start': group.time_var.get() if scheduled else None,
                 'basler_shared_parameters': self.shared_var.get(),
-                'pfs_file': self.pfs_var.get() or None,
+                'pfs_file': acc.pfs_file,
             }
             acc.worker.start_recording(RecordingJob(video_path, metadata_path, duration_s, context))
             group.recording_keys.add(acc.entry.key)
@@ -1021,7 +1054,6 @@ class MainWindow:
         groups = {str(n): {'start': g.start_var.get(), 'time': g.time_var.get()} for n, g in self.groups.items()}
         settings = RecordingSettings(
             output_directory=self.output_dir_var.get(),
-            pfs_file=self.pfs_var.get(),
             duration=float(self.duration_var.get()),
             duration_unit=self.duration_unit_var.get(),
             basler_shared_parameters=self.shared_var.get(),
@@ -1030,6 +1062,7 @@ class MainWindow:
                 'key': key,
                 'nickname': acc.entry.name,
                 'group': acc.group_var.get(),
+                'pfs_file': acc.pfs_file,
                 'parameters': ({k: acc.camera.get_settings()[k] for k in EDITABLE_PARAMETERS}
                                if acc.entry.kind == "Basler" else None),
             } for key, acc in self.accepted.items()],
@@ -1072,13 +1105,6 @@ class MainWindow:
         self.duration_unit_var.set(settings.duration_unit)
         self.shared_var.set(settings.basler_shared_parameters)
         self.start_mode_var.set(settings.start_mode)
-        self.pfs_var.set("")
-        if settings.pfs_file:
-            ok, error = validate_config_file(settings.pfs_file)
-            if ok:
-                self.pfs_var.set(settings.pfs_file)
-            else:
-                problems.append(error)
 
         self._detect_cameras()
         detected = {e.key: e for e in self.detected}
@@ -1098,6 +1124,12 @@ class MainWindow:
                 problems.append(message)
             acc = self.accepted[entry.key]
             acc.group_var.set(int(cam.get('group', 1)))
+            # First the .pfs file, then the saved parameters (they may have been changed after the file).
+            if cam.get('pfs_file'):
+                ok, error = validate_config_file(cam['pfs_file'])
+                error = self._load_pfs(acc, cam['pfs_file']) if ok else f"{entry.name}: {error}"
+                if error:
+                    problems.append(error)
             if cam.get('parameters'):
                 problems += [f"{entry.name}: {e}" for e in acc.camera.apply_settings(cam['parameters'])]
                 self._log(f"  Saved parameters applied to {entry.name}.")
@@ -1176,7 +1208,8 @@ class MainWindow:
             else:
                 widget.config(state='normal' if on else 'disabled')
 
-        for widget in (self.detect_button, self.pfs_button, self.shared_check, self.output_entry,
+        for widget in (self.detect_button, self.pfs_all_button, *self._pfs_buttons, self.shared_check,
+                       self.output_entry,
                        self.output_button, self.duration_entry, self.together_radio, self.groups_radio,
                        self.load_settings_button, self.import_excel_button, self.load_experiment_button,
                        self.clear_experiment_button):
