@@ -7,8 +7,6 @@ settings, and the experiment information (round, animals, group).
 
 Only measured or configured values are stored. Values that cannot be
 measured for a camera type are stored as null with an explanation.
-
-Reference: C:\\Users\\rasandor\\Documents\\Repositories\\multimodal_ephys_miniscope_basler\\src\\core\\experiment_metadata.py
 """
 
 import json

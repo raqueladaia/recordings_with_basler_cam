@@ -10,8 +10,6 @@ Key features:
 - Load a .pfs configuration file into the camera
 - Read the editable parameters, their limits, and apply new values in a safe order
 - Grab frames for preview (latest frame only) or recording (every frame, with drop detection)
-
-Reference: C:\\Users\\rasandor\\Documents\\Repositories\\multimodal_ephys_miniscope_basler\\src\\basler\\functions_basler_camera.py
 """
 
 from typing import Dict, List, Optional, Tuple
