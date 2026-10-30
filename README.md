@@ -6,6 +6,8 @@ Record videos from **up to 6 cameras at the same time** (Basler cameras and ordi
 webcams), with a live preview, by clicking buttons. **You do not need to know how to program**: download
 the ready-to-use program, extract it, and double-click it.
 
+![MultiCam Recorder with two Basler cameras and two USB cameras in the 2x2 preview layout](docs/main_window.png)
+
 **What it does:**
 - Finds all connected Basler and USB cameras and shows clearly which is which
 - Lets you give each camera a nickname (e.g. `box1`)
@@ -631,6 +633,7 @@ folder of the application/
 ├── LICENSE                       # MIT License
 ├── CITATION.cff                  # How to cite (GitHub "Cite this repository" button)
 ├── CHANGELOG.md                  # What changed in each version
+├── docs/                         # Images used in this README
 ├── example_camera_config_file/   # Example Basler settings for LUPE (.pfs files and their README)
 ├── src/
 │   ├── app_info.py               # Application name and version
