@@ -586,8 +586,9 @@ one pulse per frame. Details: `example_camera_config_file/README.md`.
 The program is built automatically by GitHub (`.github/workflows/release.yml`) on a clean Windows
 machine, with PyInstaller (`MultiCamRecorder.spec`, `build_release.py`).
 
-1. Change `APP_VERSION` in `src/app_info.py` (e.g. `1.0.1`), and `version` and `date-released` in
-   `CITATION.cff`, then commit and push.
+1. Change `APP_VERSION` in `src/app_info.py` (e.g. `1.0.1`), `version` and `date-released` in
+   `CITATION.cff`, and add the changes of the new version at the top of `CHANGELOG.md`;
+   then commit and push.
    Every release needs a new version number (a tag can only be used once).
 2. (Recommended) Test the build first: on GitHub, **Actions** > **Build Windows release** > **Run workflow**.
    When it finishes, download the ZIP from the bottom of the run page (**Artifacts**; GitHub puts it
@@ -629,6 +630,7 @@ folder of the application/
 ├── README.md / QUICKSTART.md     # Documentation
 ├── LICENSE                       # MIT License
 ├── CITATION.cff                  # How to cite (GitHub "Cite this repository" button)
+├── CHANGELOG.md                  # What changed in each version
 ├── example_camera_config_file/   # Example Basler settings for LUPE (.pfs files and their README)
 ├── src/
 │   ├── app_info.py               # Application name and version
