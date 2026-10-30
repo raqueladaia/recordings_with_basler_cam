@@ -15,6 +15,8 @@ authors:
 # Update version and date-released with every release (same version as APP_VERSION in src/app_info.py).
 version: 1.0.1
 date-released: 2026-10-30
+# Zenodo DOI of all versions (always leads to the newest version; each version also has its own DOI).
+doi: 10.5281/zenodo.23817008
 license: MIT
 repository-code: "https://github.com/raqueladaia/MultiCam-Recorder"
 url: "https://github.com/raqueladaia/MultiCam-Recorder"

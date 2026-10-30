@@ -1,5 +1,7 @@
 # MultiCam Recorder
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23817008.svg)](https://doi.org/10.5281/zenodo.23817008)
+
 **Multi-camera recording application for Basler and USB cameras.**
 
 Record videos from **up to 6 cameras at the same time** (Basler cameras and ordinary USB cameras such as
@@ -655,9 +657,13 @@ If you use MultiCam Recorder in your research, please cite it, with the version 
 the title bar of the program and in every metadata file):
 
 > Sandoval Ortega, R. A. (2026). *MultiCam Recorder* (Version X.Y.Z) [Computer software].
-> https://github.com/raqueladaia/MultiCam-Recorder
+> Zenodo. https://doi.org/10.5281/zenodo.23817008
 
-On the GitHub page of the repository, **"Cite this repository"** (right side) gives this citation in
+This DOI covers all versions and always leads to the newest one. Every version is archived on
+[Zenodo](https://doi.org/10.5281/zenodo.23817008) with its own DOI as well (listed on the Zenodo page
+under "Versions"): to cite exactly the version you used, use its DOI.
+
+On the GitHub page of the repository, **"Cite this repository"** (right side) gives the citation in
 APA and BibTeX format (from the file `CITATION.cff`).
 
 If you use the example LUPE camera settings or analyze your videos with LUPE, please also cite the
