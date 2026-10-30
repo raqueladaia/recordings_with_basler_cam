@@ -621,6 +621,7 @@ folder of the application/
 ├── build_release.py              # Builds the program folder and the release ZIP
 ├── .github/workflows/release.yml # Automatic build and release on GitHub
 ├── README.md / QUICKSTART.md     # Documentation
+├── LICENSE                       # MIT License
 ├── example_camera_config_file/   # Example Basler settings for LUPE (.pfs files and their README)
 ├── src/
 │   ├── app_info.py               # Application name and version
@@ -638,6 +639,11 @@ folder of the application/
 
 ## License
 
-Internal research use only.
+MultiCam Recorder is open source under the [MIT License](LICENSE): anyone may use, copy, modify and
+share it, also commercially, as long as the copyright notice and the license text are kept.
+It comes without any warranty.
+
+The ready-to-use program (ZIP) also contains Python and the packages it uses (pypylon with the Basler
+pylon runtime, OpenCV, NumPy, Pillow, openpyxl); each of them keeps its own license.
 
 **Last updated**: 2026-10-30

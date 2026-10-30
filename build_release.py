@@ -26,7 +26,7 @@ ROOT = Path(__file__).parent
 DIST = ROOT / "dist"
 PROGRAM_FOLDER = DIST / "MultiCamRecorder"
 # Files next to the .exe that users need (the program itself is packed by PyInstaller).
-EXTRA_FILES = ["README.md", "QUICKSTART.md", "example_camera_config_file"]
+EXTRA_FILES = ["README.md", "QUICKSTART.md", "LICENSE", "example_camera_config_file"]
 
 
 def check_release_tag():
