@@ -65,7 +65,7 @@ the ready-to-use program, extract it, and double-click it.
    [Step 2: Install Basler pylon](#step-2-install-basler-pylon) below, then come back here.
    This is needed only once per computer; skip it if you only use ordinary USB cameras.
 2. **Download the program:** go to
-   https://github.com/raqueladaia/recordings_with_basler_cam/releases/latest and, under **Assets**,
+   https://github.com/raqueladaia/MultiCam-Recorder/releases/latest and, under **Assets**,
    click **`MultiCamRecorder_vX.Y.Z_Windows.zip`** (X.Y.Z is the version number; about 170 MB).
 3. **Extract it:** open your **Downloads** folder, right-click the ZIP file, choose **"Extract All..."**,
    and extract it to a place you will find again, for example your **Documents** folder.
@@ -105,8 +105,8 @@ Requirements: Windows 10/11, Python 3.10 to 3.13 (tested with 3.13; the package 
 USB3 camera driver and pylon Viewer).
 
 ```bat
-git clone https://github.com/raqueladaia/recordings_with_basler_cam.git
-cd recordings_with_basler_cam
+git clone https://github.com/raqueladaia/MultiCam-Recorder.git
+cd MultiCam-Recorder
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
@@ -160,11 +160,11 @@ and the program **pylon Viewer** to check the cameras. (Skip this step if you on
 
 **Option A: Download a ZIP file of the code (no extra software)**
 
-1. Go to https://github.com/raqueladaia/recordings_with_basler_cam
+1. Go to https://github.com/raqueladaia/MultiCam-Recorder
 2. Click the green **"Code"** button, then **"Download ZIP"**.
 3. Open your **Downloads** folder, right-click the ZIP file, choose **"Extract All..."**, and extract it
    to a place you will find again, for example `C:\Users\YourName\Documents\`.
-4. Inside, you will find a folder named `recordings_with_basler_cam-main`. This is the
+4. Inside, you will find a folder named `MultiCam-Recorder-main`. This is the
    **folder of the application** (it contains `main.py` and `start_app.bat`). You may rename it,
    e.g. to `MultiCamRecorder_source`.
 
@@ -172,7 +172,7 @@ and the program **pylon Viewer** to check the cameras. (Skip this step if you on
 
 ```bat
 cd C:\Users\YourName\Documents
-git clone https://github.com/raqueladaia/recordings_with_basler_cam.git
+git clone https://github.com/raqueladaia/MultiCam-Recorder.git
 ```
 
 ### Step 4: Install the Python packages (one time only)
