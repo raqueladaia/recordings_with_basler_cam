@@ -18,6 +18,9 @@ the ready-to-use program, extract it, and double-click it.
 - Saves your whole setup so you can load it again next time
 - Saves every video as an MP4 file, with a metadata file (number of frames, frame rate, duration, settings, ...)
 
+MultiCam Recorder is free and open source ([MIT License](#license)). If you use it in your research,
+please [cite it](#how-to-cite).
+
 ---
 
 ## Which part should I read?
@@ -53,6 +56,8 @@ the ready-to-use program, extract it, and double-click it.
   - [Example settings files (LUPE)](#example-settings-files-lupe)
 - [For developers](#for-developers)
   - [Publishing a new version of the ready-to-use program](#publishing-a-new-version-of-the-ready-to-use-program)
+- [How to cite](#how-to-cite)
+- [License](#license)
 
 ---
 
@@ -581,7 +586,8 @@ one pulse per frame. Details: `example_camera_config_file/README.md`.
 The program is built automatically by GitHub (`.github/workflows/release.yml`) on a clean Windows
 machine, with PyInstaller (`MultiCamRecorder.spec`, `build_release.py`).
 
-1. Change `APP_VERSION` in `src/app_info.py` (e.g. `1.0.1`), commit and push.
+1. Change `APP_VERSION` in `src/app_info.py` (e.g. `1.0.1`), and `version` and `date-released` in
+   `CITATION.cff`, then commit and push.
    Every release needs a new version number (a tag can only be used once).
 2. (Recommended) Test the build first: on GitHub, **Actions** > **Build Windows release** > **Run workflow**.
    When it finishes, download the ZIP from the bottom of the run page (**Artifacts**; GitHub puts it
@@ -622,6 +628,7 @@ folder of the application/
 ├── .github/workflows/release.yml # Automatic build and release on GitHub
 ├── README.md / QUICKSTART.md     # Documentation
 ├── LICENSE                       # MIT License
+├── CITATION.cff                  # How to cite (GitHub "Cite this repository" button)
 ├── example_camera_config_file/   # Example Basler settings for LUPE (.pfs files and their README)
 ├── src/
 │   ├── app_info.py               # Application name and version
@@ -634,6 +641,25 @@ folder of the application/
 ├── saved_settings/               # Default folder for saved settings (created automatically)
 └── venv/                         # Private Python environment (created in Step 4)
 ```
+
+---
+
+## How to cite
+
+If you use MultiCam Recorder in your research, please cite it, with the version you used (shown in
+the title bar of the program and in every metadata file):
+
+> Sandoval Ortega, R. A. (2026). *MultiCam Recorder* (Version X.Y.Z) [Computer software].
+> https://github.com/raqueladaia/MultiCam-Recorder
+
+On the GitHub page of the repository, **"Cite this repository"** (right side) gives this citation in
+APA and BibTeX format (from the file `CITATION.cff`).
+
+If you use the example LUPE camera settings or analyze your videos with LUPE, please also cite the
+paper that introduced LUPE:
+
+> Oswell, C. S., Rogers, S. A., James, J. G. et al. Mimicking opioid analgesia in cortical pain
+> circuits. *Nature* (2026). https://doi.org/10.1038/s41586-025-09908-w
 
 ---
 

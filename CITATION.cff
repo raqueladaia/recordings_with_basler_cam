@@ -1,0 +1,26 @@
+# Citation information for MultiCam Recorder.
+# GitHub reads this file and shows a "Cite this repository" button on the repository page.
+# Format: Citation File Format (https://citation-file-format.github.io/).
+cff-version: 1.2.0
+message: "If you use MultiCam Recorder in your research, please cite it as below."
+type: software
+title: "MultiCam Recorder"
+abstract: >-
+  Multi-camera recording application for Basler and USB cameras: live preview of up to
+  6 cameras, recordings started together or in groups, MP4 videos with a metadata file
+  for every video (number of frames, frame rate, duration, camera settings).
+authors:
+  - given-names: "Raquel Adaia"
+    family-names: "Sandoval Ortega"
+# Update version and date-released with every release (same version as APP_VERSION in src/app_info.py).
+version: 1.0.1
+date-released: 2026-10-30
+license: MIT
+repository-code: "https://github.com/raqueladaia/MultiCam-Recorder"
+url: "https://github.com/raqueladaia/MultiCam-Recorder"
+keywords:
+  - video recording
+  - Basler
+  - multi-camera
+  - behavior
+  - LUPE

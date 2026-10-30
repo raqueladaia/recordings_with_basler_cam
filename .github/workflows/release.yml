@@ -53,3 +53,6 @@ jobs:
 
             If Windows shows "Windows protected your PC", click **More info** > **Run anyway**
             (the program is not code-signed). Full instructions: README.md inside the ZIP.
+
+            Free and open source (MIT License). If you use MultiCam Recorder in your research, please cite it:
+            see "How to cite" in README.md, or "Cite this repository" on the repository page.
